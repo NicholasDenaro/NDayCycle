@@ -1,4 +1,5 @@
 ﻿using Terraria;
+using Terraria.ID;
 using Terraria.ModLoader;
 
 namespace NDayCycle
@@ -10,12 +11,23 @@ namespace NDayCycle
         public override void Initialize()
         {
             PlayerRules.watch = new Item();
-            PlayerRules.watch.SetDefaults(Terraria.ID.ItemID.GoldWatch);
+            PlayerRules.watch.SetDefaults(ItemID.GoldWatch);
         }
 
         public override void OnEnterWorld(Player player)
         {
-            Main.NewText($"It is day {WorldResetter.Day}.");
+            if (NDayCycle.IsSinglePlayer)
+            {
+                Main.NewText($"It is day {WorldResetter.Day + 1}.");
+            }
+            else
+            {
+                Main.NewText($"server mode? {Main.dedServ}");
+
+                Main.NewText($"multiplayer? {Main.netMode == NetmodeID.MultiplayerClient}");
+
+                NDayCycle.GetDayFromServer();
+            }
         }
 
         public override void PostUpdateEquips()
@@ -30,7 +42,11 @@ namespace NDayCycle
         private bool showMenu = true;
         public override void PreUpdateMovement()
         {
-            //player.ghost = false;
+            if (NDayCycle.IsServer)
+            {
+                return;
+            }
+
             if (WorldResetter.Freeze)
             {
                 Main.dayRate = 0;

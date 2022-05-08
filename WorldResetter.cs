@@ -1,8 +1,10 @@
 ﻿using Microsoft.Xna.Framework;
+using System;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Terraria;
+using Terraria.IO;
 using Terraria.ModLoader;
 using Terraria.ModLoader.IO;
 
@@ -13,7 +15,7 @@ namespace NDayCycle
         static WorldResetter instance;
 
         private static bool dayProgress = false;
-        public static int Day { get; private set; } = 0;
+        public static int Day { get; set; } = 0;
         public static bool Freeze => IsEndDay();
 
         public override void PostWorldGen()
@@ -56,39 +58,55 @@ namespace NDayCycle
         {
             base.PostUpdate();
 
-            if (!dayProgress && Main.dayTime && Main.time < 3600)
+            if (NDayCycle.IsSinglePlayer || NDayCycle.IsServer)
             {
-                Day++;
-                dayProgress = true;
-
-                if (IsEndDay())
+                if (!dayProgress && Main.dayTime && Main.time < 3600)
                 {
-                    Main.gamePaused = true;
-                    Main.dayRate = 0;
-                    Main.NewText("The moon crashes into the world.", Color.Red);
+                    NextDay();
+                    dayProgress = true;
                 }
-                else
+                else if (dayProgress && !Main.dayTime)
                 {
-                    Main.NewText($"Dawn of the ${(endDay - Day == 1 ? "final" : "" + (Day + 1))} day, ${(endDay - Day) * 24} hours remaining");
+                    dayProgress = false;
                 }
-            }
-            else if (dayProgress && !Main.dayTime)
-            {
-                dayProgress = false;
             }
         }
 
         public static void NextDay()
         {
             Day++;
+
+            if (NDayCycle.IsServer)
+            {
+                NDayCycle.SendDay();
+                Console.WriteLine($"day={Day} (Dawn of the {Day + 1} day)");
+            }
+
+            if (IsEndDay())
+            {
+                Main.gamePaused = true;
+                Main.dayRate = 0;
+                Main.NewText("The moon crashes into the world.", Color.Red);
+            }
+            else
+            {
+                Main.NewText($"Dawn of the {(endDay - Day == 1 ? "final" : "" + (Day + 1))} day, {(endDay - Day) * 24} hours remaining");
+            }
         }
 
         public static void ResetWorld()
         {
             Day = 0;
             Main.dayRate = 1;
-            instance.Save();
-            WorldGen.SaveAndQuit(WorldResetter.RestoreOriginalWorld);
+            if (!NDayCycle.IsServer)
+            {
+                WorldGen.SaveAndQuit(WorldResetter.RestoreOriginalWorld);
+            }
+            else
+            {
+                WorldFile.saveWorld(WorldFile.IsWorldOnCloud);
+                NDayCycle.DisconnectPlayersForReset();
+            }
         }
 
         public static void RestoreOriginalWorld()

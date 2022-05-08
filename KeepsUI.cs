@@ -9,6 +9,8 @@ namespace NDayCycle
 {
     public class KeepsUI : UIElement
     {
+        private MenuBar menu;
+
         private Item pickaxeItem;
         private UIImage pickaxeItemImage;
         private UIText pickaxeItemCount;
@@ -33,9 +35,9 @@ namespace NDayCycle
         private UIImage item3Image;
         private UIText item3Count;
 
-        public KeepsUI()
+        public KeepsUI(MenuBar menu)
         {
-
+            this.menu = menu;
         }
 
         public override void OnInitialize()
@@ -163,6 +165,11 @@ namespace NDayCycle
 
         private void Img_OnClick(UIMouseEvent evt, UIElement listeningElement, ref Item item, ref UIImage img, ref UIText txt)
         {
+            if (menu.IsReady)
+            {
+                return;
+            }
+
             //Main.NewText($"keepsui {Main.mouseItem.ToString()}");
 
             if (item == pickaxeItem && !Main.mouseItem.IsAir && Main.mouseItem.pick == 0)
@@ -193,14 +200,24 @@ namespace NDayCycle
             Main.LocalPlayer.mouseInterface = true;
         }
 
+        public void DeepCloneItems()
+        {
+            pickaxeItem = pickaxeItem.DeepClone();
+            axeItem = axeItem.DeepClone();
+            weaponItem = weaponItem.DeepClone();
+            item1 = item1.DeepClone();
+            item2 = item2.DeepClone();
+            item3 = item3.DeepClone();
+        }
+
         public void SetItems()
         {
-            Main.player[0].inventory[0] = pickaxeItem.DeepClone();
-            Main.player[0].inventory[1] = axeItem.DeepClone();
-            Main.player[0].inventory[2] = weaponItem.DeepClone();
-            Main.player[0].inventory[3] = item1.DeepClone();
-            Main.player[0].inventory[4] = item2.DeepClone();
-            Main.player[0].inventory[5] = item3.DeepClone();
+            Main.player[Main.myPlayer].inventory[0] = pickaxeItem.DeepClone();
+            Main.player[Main.myPlayer].inventory[1] = axeItem.DeepClone();
+            Main.player[Main.myPlayer].inventory[2] = weaponItem.DeepClone();
+            Main.player[Main.myPlayer].inventory[3] = item1.DeepClone();
+            Main.player[Main.myPlayer].inventory[4] = item2.DeepClone();
+            Main.player[Main.myPlayer].inventory[5] = item3.DeepClone();
 
             pickaxeItem.TurnToAir();
             axeItem.TurnToAir();
@@ -229,6 +246,8 @@ namespace NDayCycle
     {
         KeepsUI keeps;
 
+        public bool IsReady { get; private set; } = false;
+
         public override void OnInitialize()
         {
             UIPanel panel = new UIPanel();
@@ -236,7 +255,7 @@ namespace NDayCycle
             panel.Height.Set(200, 0);
             panel.HAlign = panel.VAlign = 0.5f;
 
-            panel.Append(keeps = new KeepsUI());
+            panel.Append(keeps = new KeepsUI(this));
 
             Append(panel);
 
@@ -253,14 +272,32 @@ namespace NDayCycle
 
         private void ResetButton_OnClick(UIMouseEvent evt, UIElement listeningElement)
         {
-            Main.NewText("Rewinding time");
+            if (NDayCycle.IsSinglePlayer)
+            {
+                Main.NewText("Rewinding time");
 
-            foreach (Item item in Main.player[0].inventory)
+                ResetInventory();
+                WorldResetter.ResetWorld();
+            }
+            else
+            {
+                this.IsReady = true;
+                Main.NewText("Sent ready message to server");
+                NDayCycle.ReadyForReset();
+            }
+        }
+
+        public void ResetInventory()
+        {
+            this.IsReady = false;
+            keeps.DeepCloneItems();
+
+            foreach (Item item in Main.player[Main.myPlayer].inventory)
             {
                 item.TurnToAir();
             }
 
-            foreach (Item item in Main.player[0].armor)
+            foreach (Item item in Main.player[Main.myPlayer].armor)
             {
                 item.TurnToAir();
             }
@@ -269,7 +306,7 @@ namespace NDayCycle
 
             this.Deactivate();
             NDayCycle.HideMenu();
-            WorldResetter.ResetWorld();
+            WorldGen.SaveAndQuit();
         }
 
         public override void Update(GameTime gameTime)
