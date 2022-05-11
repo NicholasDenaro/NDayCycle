@@ -27,6 +27,11 @@ namespace NDayCycle
         [DefaultValue(false)]
         public bool KeepMoney { get; set; }
 
+        [Label("Keep ammo after reset")]
+        [Tooltip("When enabled, players will keep their ammo after the world is reset")]
+        [DefaultValue(false)]
+        public bool KeepAmmo { get; set; }
+
         [Label("Disallow items that are stackable")]
         [Tooltip("When enabled, players will not be allowed to keep stackable items after the world is reset")]
         [DefaultValue(false)]

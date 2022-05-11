@@ -20,6 +20,74 @@ namespace NDayCycle
         public static bool IsServer { get; private set; }
         public static bool IsSinglePlayer => Main.netMode != NetmodeID.MultiplayerClient;
 
+        public static int[] StackableItems = new int[]
+        {
+            ItemID.Bomb,
+            ItemID.BombFish,
+            ItemID.BouncyBomb,
+            ItemID.StickyBomb,
+
+            ItemID.Torch,
+            ItemID.BlueTorch,
+            ItemID.BoneTorch,
+            ItemID.CursedTorch,
+            ItemID.DemonTorch,
+            ItemID.GreenTorch,
+            ItemID.IceTorch,
+            ItemID.IchorTorch,
+            ItemID.OrangeTorch,
+            ItemID.PinkTorch,
+            ItemID.PurpleTorch,
+            ItemID.RainbowTorch,
+            ItemID.RedTorch,
+            ItemID.TikiTorch,
+            ItemID.UltrabrightTorch,
+            ItemID.WhiteTorch,
+            ItemID.YellowTorch,
+
+            ItemID.CopperCoin,
+            ItemID.SilverCoin,
+            ItemID.GoldCoin,
+            ItemID.PlatinumCoin,
+
+            ItemID.MusketBall,
+            ItemID.MeteorShot,
+            ItemID.ChlorophyteBullet,
+            ItemID.CrystalBullet,
+            ItemID.CursedBullet,
+            ItemID.EmptyBullet,
+            ItemID.ExplodingBullet,
+            ItemID.GoldenBullet,
+            ItemID.HighVelocityBullet,
+            ItemID.IchorBullet,
+            ItemID.MoonlordBullet,
+            ItemID.NanoBullet,
+            ItemID.PartyBullet,
+            ItemID.SilverBullet,
+            ItemID.VenomBullet,
+
+            ItemID.Spike,
+
+            ItemID.BoneArrow,
+            ItemID.ChlorophyteArrow,
+            ItemID.CursedArrow,
+            ItemID.FlamingArrow,
+            ItemID.FrostburnArrow,
+            ItemID.HellfireArrow,
+            ItemID.HolyArrow,
+            ItemID.IchorArrow,
+            ItemID.JestersArrow,
+            ItemID.MoonlordArrow,
+            ItemID.UnholyArrow,
+            ItemID.VenomArrow,
+            ItemID.WoodenArrow,
+        };
+
+        public static bool StackableItemTypes(Item item)
+        {
+            return item.potion || item.consumable;
+        }
+
         public List<int> ready;
 
         public override void Load()

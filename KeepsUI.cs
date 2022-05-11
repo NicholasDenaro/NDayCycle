@@ -139,6 +139,11 @@ namespace NDayCycle
                 return;
             }
 
+            if (ModContent.GetInstance<NDayCycleConfig>().DisableStackableItems && (NDayCycle.StackableItems.Contains(Main.mouseItem.type) || NDayCycle.StackableItemTypes(Main.mouseItem)))
+            {
+                return;
+            }
+
             if (type == SlotType.pickaxe && !Main.mouseItem.IsAir && Main.mouseItem.pick <= 0)
             {
                 return;
