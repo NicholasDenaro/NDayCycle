@@ -106,6 +106,13 @@ namespace NDayCycle
             }
         }
 
+        public override void Unload()
+        {
+            instance = null;
+            _ui = null;
+            MenuBar = null;
+        }
+
         public static void ShowMenu()
         {
             _ui.SetState(MenuBar);

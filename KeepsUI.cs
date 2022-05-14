@@ -1,5 +1,4 @@
 ﻿using Microsoft.Xna.Framework;
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using Terraria;
@@ -36,10 +35,6 @@ namespace NDayCycle
             {
                 slots.Add(new ItemSlot(50 * (i % 3), 50 * (1 + i / 3), this, ItemSlot.SlotType.any));
             }
-
-            //slots.Add(new ItemSlot(0, 50, this, ItemSlot.SlotType.any));
-            //slots.Add(new ItemSlot(50, 50, this, ItemSlot.SlotType.any));
-            //slots.Add(new ItemSlot(100, 50, this, ItemSlot.SlotType.any));
 
             this.Width.Set(200, 0);
             this.Height.Set(50 + 50 * (1 + ModContent.GetInstance<NDayCycleConfig>().MiscItemsToKeep / 3), 0);
@@ -239,10 +234,7 @@ namespace NDayCycle
                 item.TurnToAir();
             }
 
-
-            this.Deactivate();
             NDayCycle.HideMenu();
-            WorldGen.SaveAndQuit();
         }
 
         public override void Update(GameTime gameTime)

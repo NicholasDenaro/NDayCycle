@@ -1,10 +1,7 @@
 ﻿using Microsoft.Xna.Framework;
 using System;
 using System.IO;
-using System.Threading;
-using System.Threading.Tasks;
 using Terraria;
-using Terraria.IO;
 using Terraria.ModLoader;
 using Terraria.ModLoader.IO;
 
@@ -12,48 +9,53 @@ namespace NDayCycle
 {
     class WorldResetter : ModWorld
     {
-        static WorldResetter instance;
+        static IWorldResetStrategy wrs = new CopyTileStateWorldResetStrategy();
 
         private static bool dayProgress = false;
         public static int Day { get; set; } = 0;
-        public static bool Freeze => IsEndDay();
 
         public override void PostWorldGen()
         {
-            string world = Path.Combine(Main.WorldPath, Main.worldName + ".wld");
-            File.WriteAllText("c:\\modinfo\\log.txt", $"{File.Exists(world)}");
-            Task.Run(() =>
-            {
-                while (!File.Exists(world))
-                {
-                    Thread.Sleep(100);
-                }
-                File.Copy(world, world + ".ncyclebak");
-            });
+            wrs.CopyBaseState();
         }
 
         public override void Initialize()
         {
-            instance = this;
             Day = 0;
             dayProgress = true;
         }
 
         public override TagCompound Save()
         {
-            return new TagCompound
+            try
             {
-                [nameof(Day)] = Day,
-                [nameof(dayProgress)] = dayProgress,
-            };
+                var state = wrs.State();
+                var tag = new TagCompound
+                {
+                    [nameof(Day)] = Day,
+                    [nameof(dayProgress)] = dayProgress,
+                };
+
+                tag.Add("world", state);
+
+                return tag;
+            }
+            catch (Exception ex)
+            {
+                File.AppendAllText("c:\\modinfo\\errorlog.txt", $"{DateTime.Now} {ex.Message}\n{ex.StackTrace}\n");
+            }
+
+            return null;
         }
 
         public override void Load(TagCompound tag)
         {
             Day = tag.GetInt(nameof(Day));
             dayProgress = tag.GetBool(nameof(dayProgress));
+            wrs.LoadState(tag.GetCompound("world"));
         }
 
+        private static double frozenTime;
         public override void PostUpdate()
         {
             base.PostUpdate();
@@ -63,11 +65,20 @@ namespace NDayCycle
                 if (!dayProgress && Main.dayTime && Main.time < 3600)
                 {
                     NextDay();
+                    if (IsEndDay())
+                    {
+                        frozenTime = Main.time;
+                    }
                     dayProgress = true;
                 }
                 else if (dayProgress && !Main.dayTime)
                 {
                     dayProgress = false;
+                }
+
+                if (IsEndDay())
+                {
+                    Main.time = frozenTime;
                 }
             }
         }
@@ -98,15 +109,9 @@ namespace NDayCycle
         {
             Day = 0;
             Main.dayRate = 1;
-            if (!NDayCycle.IsServer)
-            {
-                WorldGen.SaveAndQuit(WorldResetter.RestoreOriginalWorld);
-            }
-            else
-            {
-                WorldFile.saveWorld(WorldFile.IsWorldOnCloud);
-                NDayCycle.DisconnectPlayersForReset();
-            }
+            dayProgress = true;
+            wrs.ResetToBaseState(NDayCycle.IsServer);
+            Main.NewText($"Day is {Day}");
         }
 
         public static void RestoreOriginalWorld()
@@ -117,7 +122,7 @@ namespace NDayCycle
 
 
         const int endDay = 3;
-        private static bool IsEndDay()
+        public static bool IsEndDay()
         {
             return Day >= endDay;
         }

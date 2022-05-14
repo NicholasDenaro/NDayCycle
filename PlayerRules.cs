@@ -6,11 +6,10 @@ namespace NDayCycle
 {
     class PlayerRules : ModPlayer
     {
-        static Item watch;
+        static Item watch = new Item();
 
         public override void Initialize()
         {
-            PlayerRules.watch = new Item();
             PlayerRules.watch.SetDefaults(ItemID.GoldWatch);
         }
 
@@ -47,7 +46,7 @@ namespace NDayCycle
                 return;
             }
 
-            if (WorldResetter.Freeze)
+            if (WorldResetter.IsEndDay())
             {
                 Main.dayRate = 0;
                 Main.gamePaused = true;
@@ -67,6 +66,7 @@ namespace NDayCycle
             else
             {
                 player.ghost = false;
+                showMenu = true;
             }
         }
     }
