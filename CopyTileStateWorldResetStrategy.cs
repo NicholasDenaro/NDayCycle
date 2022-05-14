@@ -16,32 +16,25 @@ namespace NDayCycle
 
         public void CopyBaseState()
         {
-            try
+            size = Main.maxTilesX * Main.maxTilesY;
+            tileStates = new Tile[Main.maxTilesX, Main.maxTilesY];
+            for (int y = 0; y < Main.maxTilesY; y++)
             {
-                size = Main.maxTilesX * Main.maxTilesY;
-                tileStates = new Tile[Main.maxTilesX, Main.maxTilesY];
-                for (int y = 0; y < Main.maxTilesY; y++)
+                for (int x = 0; x < Main.maxTilesX; x++)
                 {
-                    for (int x = 0; x < Main.maxTilesX; x++)
-                    {
-                        tileStates[x, y] = new Tile(Main.tile[x, y]);
-                    }
-                }
-
-                chests = new List<List<List<int>>>(Main.chest.Length);
-                for (int i = 0; i < Main.chest.Length; i++)
-                {
-                    List<List<int>> items = Main.chest[i]?.item.Select(item => new List<int> {
-                        item?.type ?? ItemID.None,
-                        item?.stack ?? 0,
-                    }).ToList() ?? new List<List<int>>();
-
-                    chests.Insert(i, items);
+                    tileStates[x, y] = new Tile(Main.tile[x, y]);
                 }
             }
-            catch (Exception ex)
+
+            chests = new List<List<List<int>>>(Main.chest.Length);
+            for (int i = 0; i < Main.chest.Length; i++)
             {
-                File.AppendAllText("c:\\modinfo\\errorlog.txt", $"{DateTime.Now} {ex.Message}\n{ex.StackTrace}\n");
+                List<List<int>> items = Main.chest[i]?.item.Select(item => new List<int> {
+                    item?.type ?? ItemID.None,
+                    item?.stack ?? 0,
+                }).ToList() ?? new List<List<int>>();
+
+                chests.Insert(i, items);
             }
         }
 
@@ -84,7 +77,7 @@ namespace NDayCycle
             }
             catch (Exception ex)
             {
-                File.AppendAllText("c:\\modinfo\\errorlog.txt", $"{DateTime.Now} {ex.Message}\n{ex.StackTrace}\n");
+                Console.Error.WriteLine($"{DateTime.Now} {ex.Message}\n{ex.StackTrace}");
                 Main.NewText($"Error: {ex.Message}");
             }
             finally
@@ -130,8 +123,6 @@ namespace NDayCycle
         {
             var tiles = new List<List<int>>(size);
 
-            File.AppendAllText("c:\\modinfo\\logs.txt", $"{tileStates.Length}//{size}\n");
-
             for (int y = 0; y < Main.maxTilesY; y++)
             {
                 for (int x = 0; x < Main.maxTilesX; x++)
@@ -154,9 +145,9 @@ namespace NDayCycle
                     }
                     catch (Exception ex)
                     {
-                        File.AppendAllText("c:\\modinfo\\errorlog.txt", $"{DateTime.Now} maxX,maxY {Main.maxTilesX},{Main.maxTilesY}\n");
-                        File.AppendAllText("c:\\modinfo\\errorlog.txt", $"{DateTime.Now} x,y {x},{y}\n");
-                        File.AppendAllText("c:\\modinfo\\errorlog.txt", $"{DateTime.Now} {ex.Message}\n{ex.StackTrace}\n");
+                        Console.Error.WriteLine($"{DateTime.Now} maxX,maxY {Main.maxTilesX},{Main.maxTilesY}\n");
+                        Console.Error.WriteLine($"{DateTime.Now} x,y {x},{y}\n");
+                        Console.Error.WriteLine($"{DateTime.Now} {ex.Message}\n{ex.StackTrace}\n");
                         throw;
                     }
                 }

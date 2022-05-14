@@ -18,14 +18,10 @@ namespace NDayCycle
         public override void PostWorldGen()
         {
             wrs.CopyBaseState();
-                }
-                File.Copy(world, world + ".ncyclebak");
-            });
         }
 
         public override void Initialize()
         {
-            instance = this;
             Day = 0;
             dayProgress = true;
         }
@@ -37,9 +33,9 @@ namespace NDayCycle
                 var state = wrs.State();
                 var tag = new TagCompound
                 {
-                [nameof(Day)] = Day,
-                [nameof(dayProgress)] = dayProgress,
-            };
+                    [nameof(Day)] = Day,
+                    [nameof(dayProgress)] = dayProgress,
+                };
 
                 tag.Add("world", state);
 
@@ -47,8 +43,8 @@ namespace NDayCycle
             }
             catch (Exception ex)
             {
-                File.AppendAllText("c:\\modinfo\\errorlog.txt", $"{DateTime.Now} {ex.Message}\n{ex.StackTrace}\n");
-        }
+                Console.Error.WriteLine($"{DateTime.Now} {ex.Message}\n{ex.StackTrace}");
+            }
 
             return null;
         }
