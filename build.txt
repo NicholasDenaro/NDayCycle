@@ -1,0 +1,3 @@
+displayName = N-Day Cycle
+author = ndenarodev
+version = 0.1

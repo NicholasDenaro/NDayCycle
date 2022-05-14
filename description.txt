@@ -1,0 +1,1 @@
+N-Day Cycle is a mod which takes inspiration from The Wand of Sparking (https://www.youtube.com/c/WandofSparking) and Majora's Mask (https://en.wikipedia.org/wiki/The_Legend_of_Zelda:_Majora%27s_Mask) to automatically reset the world and help the user carry over specific items.
