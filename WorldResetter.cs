@@ -21,7 +21,6 @@ namespace NDayCycle
         public override void PostWorldGen()
         {
             string world = Path.Combine(Main.WorldPath, Main.worldName + ".wld");
-            File.WriteAllText("c:\\modinfo\\log.txt", $"{File.Exists(world)}");
             Task.Run(() =>
             {
                 while (!File.Exists(world))
