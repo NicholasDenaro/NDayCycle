@@ -38,8 +38,8 @@ namespace NDayCycle
         public bool DisableStackableItems { get; set; }
 
         [ReloadRequired]
-        [Label("Specifies the number additional items to keep")]
-        [Tooltip("Allows to customize additional items slots to keep after the world is reset (between 0 and 6)")]
+        [Label("Number of additional items to keep after reset")]
+        [Tooltip("Specifies the number of items, not including the 4 tools, to keep after reset")]
         [DefaultValue(3)]
         public int MiscItemsToKeep { get; set; }
 

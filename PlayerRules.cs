@@ -10,6 +10,7 @@ namespace NDayCycle
 
         public override void Initialize()
         {
+            PlayerRules.watch = new Item();
             PlayerRules.watch.SetDefaults(ItemID.GoldWatch);
         }
 
