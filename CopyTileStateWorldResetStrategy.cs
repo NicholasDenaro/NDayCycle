@@ -42,6 +42,7 @@ namespace NDayCycle
         {
             try
             {
+                var start = DateTime.Now;
                 Main.NewText("Resetting tiles");
                 for (int y = 0; y < Main.maxTilesY; y++)
                 {
@@ -56,8 +57,14 @@ namespace NDayCycle
                 {
                     for (int x = 0; x < Main.maxTilesX; x++)
                     {
-                        WorldGen.SquareTileFrame(x, y, true);
-                        WorldGen.SquareWallFrame(x, y, true);
+                        if (Main.tile[x, y].active())
+                        {
+                            WorldGen.SquareTileFrame(x, y, true);
+                        }
+                        if (Main.tile[x,y].wall != WallID.None)
+                        {
+                            WorldGen.SquareWallFrame(x, y, true);
+                        }
                     }
                 }
 
@@ -71,9 +78,17 @@ namespace NDayCycle
                     }
                 }
 
+                for (int i = 0; i < Main.npc.Length; i++)
+                {
+                    Main.npc[i].life = 0;
+                }
+
                 Main.updateMap = true;
                 Main.time = 3600;
                 Main.dayTime = true;
+
+                var end = DateTime.Now;
+                Main.NewText($"Time: {end - start}");
             }
             catch (Exception ex)
             {

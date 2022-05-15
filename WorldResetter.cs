@@ -102,7 +102,27 @@ namespace NDayCycle
             }
             else
             {
-                Main.NewText($"Dawn of the {(endDay - Day == 1 ? "final" : "" + (Day + 1))} day, {(endDay - Day) * 24} hours remaining");
+                Main.NewText($"Dawn of the {(endDay - Day == 1 ? "final" : "" + (Day + 1))} day, {(endDay - Day) * 24} hours remain");
+                NDayCycle.ShowDayMessage("Dawn of", $"The {(endDay - Day == 1 ? "Final" : NumberToPosition(Day + 1))} Day", $"-{(endDay - Day) * 24} Hours Remain-");
+            }
+        }
+        
+        private static string NumberToPosition(int num)
+        {
+            switch(num)
+            {
+                case 1:
+                    return "First";
+                case 2:
+                    return "Second";
+                case 3:
+                    return "Third";
+                case 4:
+                    return "Fourth";
+                case 5:
+                    return "Fifth";
+                default:
+                    return "Unknown";
             }
         }
 

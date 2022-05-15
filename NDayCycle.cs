@@ -16,7 +16,8 @@ namespace NDayCycle
 	{
         private static NDayCycle instance;
         private static UserInterface _ui;
-        public static MenuBar MenuBar;
+        public static MenuBarUIState MenuBar;
+        public static DawnDayUIState DayMessage;
         public static bool IsServer { get; private set; }
         public static bool IsSinglePlayer => Main.netMode != NetmodeID.MultiplayerClient;
 
@@ -83,6 +84,8 @@ namespace NDayCycle
             ItemID.WoodenArrow,
         };
 
+        public static bool Pause { get; set; }
+
         public static bool StackableItemTypes(Item item)
         {
             return item.potion || item.consumable;
@@ -90,14 +93,40 @@ namespace NDayCycle
 
         public List<int> ready;
 
+        public override void MidUpdatePlayerNPC()
+        {
+            PreUpdateEntities();
+        }
+
+        public override void MidUpdateProjectileItem()
+        {
+            PreUpdateEntities();
+        }
+
+        public override void PreUpdateEntities()
+        {
+            if (Pause)
+            {
+                Main.gamePaused = true;
+                Main.autoPause = true;
+            }
+            else
+            {
+                Main.gamePaused = false;
+                Main.autoPause = false;
+            }
+        }
+
         public override void Load()
         {
             instance = this;
             ready = new List<int>();
             if (!Main.dedServ)
             {
-                MenuBar = new MenuBar();
+                MenuBar = new MenuBarUIState();
                 MenuBar.Activate();
+                DayMessage = new DawnDayUIState();
+                DayMessage.Activate();
                 _ui = new UserInterface();
             }
             else
@@ -118,7 +147,14 @@ namespace NDayCycle
             _ui.SetState(MenuBar);
         }
 
-        public static void HideMenu()
+        public static void ShowDayMessage(string top, string mid, string bot)
+        {
+            DayMessage.SetMessage(top, mid, bot);
+            _ui.SetState(DayMessage);
+            Task.Delay(5000).ContinueWith(task => HideUI());
+        }
+
+        public static void HideUI()
         {
             _ui.SetState(null);
         }

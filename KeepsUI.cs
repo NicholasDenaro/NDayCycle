@@ -11,13 +11,13 @@ namespace NDayCycle
 {
     public class KeepsUI : UIElement
     {
-        private MenuBar menu;
+        private MenuBarUIState menu;
 
         private List<ItemSlot> slots = new List<ItemSlot>();
 
         public int SlotsCount => slots.Count;
 
-        public KeepsUI(MenuBar menu)
+        public KeepsUI(MenuBarUIState menu)
         {
             this.menu = menu;
         }
@@ -166,7 +166,7 @@ namespace NDayCycle
         }
     }
 
-    public class MenuBar: UIState
+    public class MenuBarUIState: UIState
     {
         KeepsUI keeps;
 
@@ -234,10 +234,7 @@ namespace NDayCycle
                 item.TurnToAir();
             }
 
-
-            this.Deactivate();
-            NDayCycle.HideMenu();
-            WorldGen.SaveAndQuit();
+            NDayCycle.HideUI();
         }
 
         public override void Update(GameTime gameTime)
