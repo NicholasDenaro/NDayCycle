@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Terraria;
+using Terraria.Graphics;
 using Terraria.ID;
 using Terraria.ModLoader;
 using Terraria.UI;
@@ -14,13 +15,17 @@ namespace NDayCycle
 {
     public class NDayCycle : Mod
 	{
-        private static NDayCycle instance;
+        public static NDayCycle instance;
         private static UserInterface _ui;
         public static MenuBarUIState MenuBar;
         public static DawnDayUIState DayMessage;
+        public static ResetSceneUIState ResetSceneUIState;
+        private static bool finalHoursSound = false;
         public static bool IsServer { get; private set; }
         public static bool IsSinglePlayer => Main.netMode != NetmodeID.MultiplayerClient;
+        public static double frozenTime = -1;
 
+        #region Stackables
         public static int[] StackableItems = new int[]
         {
             ItemID.Bomb,
@@ -83,8 +88,76 @@ namespace NDayCycle
             ItemID.VenomArrow,
             ItemID.WoodenArrow,
         };
+        #endregion
 
-        public static bool Pause { get; set; }
+        private static NPC[] npcsToThaw;
+        private static bool _pause;
+        public static bool Pause
+        {
+            get
+            {
+                return _pause;
+            }
+            set
+            {
+                _pause = value;
+                frozenTime = Main.time;
+                if (_pause == true)
+                {
+                    npcsToThaw = Main.npc.Where(npc => npc.active).ToArray();
+
+                    foreach (NPC npc in npcsToThaw)
+                    {
+                        npc.active = false;
+                    }
+                }
+                else
+                {
+                    foreach (NPC npc in npcsToThaw)
+                    {
+                        npc.active = true;
+                        if (!Main.npc.Contains(npc))
+                        {
+                            for (int i = 0; i < Main.npc.Length; i++)
+                            {
+                                if (Main.npc[i] == null || !Main.npc[i].active)
+                                {
+                                    Main.npc[i] = npc;
+                                    npc.active = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    npcsToThaw = null;
+                }
+            }
+        }
+
+        public override void Load()
+        {
+            instance = this;
+            ready = new List<int>();
+            if (!Main.dedServ)
+            {
+                TextureManager.Load("Images/UI/ResetScene");
+                TextureManager.Load("Images/UI/ResetScene_1");
+                TextureManager.Load("Images/UI/ResetScene_2");
+                TextureManager.Load("Images/UI/ResetScene_3");
+
+                MenuBar = new MenuBarUIState();
+                MenuBar.Activate();
+                DayMessage = new DawnDayUIState();
+                DayMessage.Activate();
+                ResetSceneUIState = new ResetSceneUIState();
+                ResetSceneUIState.Activate();
+                _ui = new UserInterface();
+            }
+            else
+            {
+                IsServer = true;
+            }
+        }
 
         public static bool StackableItemTypes(Item item)
         {
@@ -109,29 +182,35 @@ namespace NDayCycle
             {
                 Main.gamePaused = true;
                 Main.autoPause = true;
+                Main.time = frozenTime;
             }
             else
             {
                 Main.gamePaused = false;
                 Main.autoPause = false;
             }
-        }
 
-        public override void Load()
-        {
-            instance = this;
-            ready = new List<int>();
-            if (!Main.dedServ)
+            if (!IsServer && _ui?.CurrentState == ResetSceneUIState)
             {
-                MenuBar = new MenuBarUIState();
-                MenuBar.Activate();
-                DayMessage = new DawnDayUIState();
-                DayMessage.Activate();
-                _ui = new UserInterface();
+                ResetSceneUIState.Step();
             }
-            else
+
+            if (!NDayCycle.IsServer && !Main.dayTime)
             {
-                IsServer = true;
+                const int spacing = 200;
+                if (Main.time > 3600 * 8 + (3600 - spacing * 5) && Main.GameUpdateCount % 200 == 0)
+                {
+                    if (!WorldResetter.IsLastDay())
+                    {
+                        Main.PlaySound(this.GetLegacySoundSlot(SoundType.Custom, "Sounds/Custom/TickSound"));
+                    }
+
+                }
+                if (WorldResetter.IsLastDay() && Main.time > 3600 * 6 + 3600 * 1 / 4 && !finalHoursSound)
+                {
+                    Main.PlayTrackedSound(this.GetLegacySoundSlot(SoundType.Custom, "Sounds/Custom/FinalHoursSound"));
+                    finalHoursSound = true;
+                }
             }
         }
 
@@ -144,19 +223,51 @@ namespace NDayCycle
 
         public static void ShowMenu()
         {
-            _ui.SetState(MenuBar);
+            _ui?.SetState(MenuBar);
         }
 
         public static void ShowDayMessage(string top, string mid, string bot)
         {
-            DayMessage.SetMessage(top, mid, bot);
-            _ui.SetState(DayMessage);
-            Task.Delay(5000).ContinueWith(task => HideUI());
+            const int pauseTime = 5000;
+            if (!IsServer)
+            {
+                DayMessage.SetMessage(top, mid, bot);
+                Main.PlaySound(instance.GetLegacySoundSlot(SoundType.Custom, "Sounds/Custom/DawnSound"));
+                _ui.SetState(DayMessage);
+                var invIsOpen = Main.playerInventory;
+                NDayCycle.Pause = true;
+                Main.playerInventory = true;
+                Task.Delay(pauseTime).ContinueWith(task =>
+                {
+                    HideUI();
+                    NDayCycle.Pause = false;
+                    Main.playerInventory = invIsOpen;
+                });
+            }
+            else
+            {
+                Console.WriteLine($"Pausing for {pauseTime}ms; game time {Main.time}");
+                NDayCycle.frozenTime = Main.time;
+                NDayCycle.Pause = true;
+                Main.playerInventory = true;
+                Task.Delay(pauseTime).ContinueWith(task =>
+                {
+                    Console.WriteLine($"unpaused; game time: {Main.time}");
+                    NDayCycle.Pause = false;
+                    SendTime();
+                });
+            }
+        }
+
+        public static void ShowResetUI()
+        {
+            _ui?.SetState(ResetSceneUIState);
+            ResetSceneUIState?.Reset();
         }
 
         public static void HideUI()
         {
-            _ui.SetState(null);
+            _ui?.SetState(null);
         }
 
         public override void UpdateUI(GameTime gameTime)
@@ -189,10 +300,7 @@ namespace NDayCycle
                 switch ((MessageTypes)messageType)
                 {
                     case MessageTypes.GETDAY:
-                        ModPacket packet = instance.GetPacket();
-                        packet.Write((byte)MessageTypes.SETDAY);
-                        packet.Write(WorldResetter.Day);
-                        packet.Send(whoAmI);
+                        SendDay(whoAmI);
                         break;
                     case MessageTypes.READYTORESET:
                         ready.Add(whoAmI);
@@ -206,10 +314,37 @@ namespace NDayCycle
                 {
                     case MessageTypes.SETDAY:
                         WorldResetter.Day = reader.ReadInt32();
+                        Main.time = reader.ReadDouble();
+                        Main.dayTime = reader.ReadBoolean();
                         Main.NewText($"It is day {WorldResetter.Day + 1}.");
+                        if (!WorldResetter.IsEnd() && Main.time < 100 && Main.dayTime)
+                        {
+                            NDayCycle.ShowDayMessage("Dawn of", $"The {(WorldResetter.endDay - WorldResetter.Day == 1 ? "Final" : WorldResetter.NumberToPosition(WorldResetter.Day + 1))} Day", $"-{(WorldResetter.endDay - WorldResetter.Day) * 24} Hours Remain-");
+                        }
+                        break;
+                    case MessageTypes.SETTIME:
+                        WorldResetter.Day = reader.ReadInt32();
+                        Main.time = reader.ReadDouble();
+                        Main.dayTime = reader.ReadBoolean();
+                        if (!WorldResetter.IsEnd())
+                        {
+                            Main.NewText($"It is day {WorldResetter.Day + 1}.");
+                        }
                         break;
                     case MessageTypes.RESETANDDISCONNECT:
                         MenuBar.ResetInventory();
+                        break;
+                    case MessageTypes.REWIND:
+                        MenuBar.ResetInventory();
+                        NDayCycle.ShowResetUI();
+                        break;
+                    case MessageTypes.RESPAWNPLAYERS:
+                        Main.NewText("Respawning");
+                        foreach (Player player in Main.player)
+                        {
+                            player.ghost = false;
+                            player.position = new Vector2(Main.spawnTileX, Main.spawnTileY - 3).ToWorldCoordinates();
+                        }
                         break;
                 }
             }
@@ -227,7 +362,6 @@ namespace NDayCycle
             if (allReady)
             {
                 Console.WriteLine("All are ready. Reset the world.");
-                // TODO: clear player inventory
                 WorldResetter.ResetWorld();
             }
         }
@@ -237,9 +371,12 @@ namespace NDayCycle
         /// </summary>
         public static void GetDayFromServer()
         {
-            ModPacket packet = instance.GetPacket();
-            packet.Write((byte)MessageTypes.GETDAY);
-            packet.Send();
+            if (!IsServer)
+            {
+                ModPacket packet = instance.GetPacket();
+                packet.Write((byte)MessageTypes.GETDAY);
+                packet.Send();
+            }
         }
 
         /// <summary>
@@ -247,21 +384,58 @@ namespace NDayCycle
         /// </summary>
         public static void ReadyForReset()
         {
-            ModPacket packet = instance.GetPacket();
-            packet.Write((byte)MessageTypes.READYTORESET);
-            packet.Send();
+            if (!IsServer)
+            {
+                ModPacket packet = instance.GetPacket();
+                packet.Write((byte)MessageTypes.READYTORESET);
+                packet.Send();
+            }
         }
-
 
         /// <summary>
         /// Server sends packet to client
         /// </summary>
-        public static void SendDay()
+        public static void SendDay(int whoAmi = -1)
         {
-            ModPacket packet = instance.GetPacket();
-            packet.Write((byte)MessageTypes.SETDAY);
-            packet.Write(WorldResetter.Day);
-            packet.Send();
+            if (IsServer)
+            {
+                ModPacket packet = instance.GetPacket();
+                packet.Write((byte)MessageTypes.SETDAY);
+                packet.Write(WorldResetter.Day);
+                packet.Write(Main.time);
+                packet.Write(Main.dayTime);
+                if (whoAmi >= 0)
+                {
+                    packet.Send(whoAmi);
+                }
+                else
+                {
+                    packet.Send();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Server sends packet to client
+        /// </summary>
+        public static void SendTime(int whoAmi = -1)
+        {
+            if (IsServer)
+            {
+                ModPacket packet = instance.GetPacket();
+                packet.Write((byte)MessageTypes.SETTIME);
+                packet.Write(WorldResetter.Day);
+                packet.Write(Main.time);
+                packet.Write(Main.dayTime);
+                if (whoAmi >= 0)
+                {
+                    packet.Send(whoAmi);
+                }
+                else
+                {
+                    packet.Send();
+                }
+            }
         }
 
         /// <summary>
@@ -269,24 +443,58 @@ namespace NDayCycle
         /// </summary>
         public static void DisconnectPlayersForReset()
         {
-            Main.autoShutdown = false;
-            ModPacket packet = instance.GetPacket();
-            packet.Write((byte)MessageTypes.RESETANDDISCONNECT);
-            packet.Send();
-
-            Task.Run(() =>
+            if (IsServer)
             {
-                while (Main.player.Any(player => player.active))
-                {
-                    Thread.Sleep(100);
-                }
+                Main.autoShutdown = false;
+                ModPacket packet = instance.GetPacket();
+                packet.Write((byte)MessageTypes.RESETANDDISCONNECT);
+                packet.Send();
 
-                WorldResetter.RestoreOriginalWorld();
-                Main.autoShutdown = true;
-                Environment.Exit(0);
-            });
+                Task.Run(() =>
+                {
+                    while (Main.player.Any(player => player.active))
+                    {
+                        Thread.Sleep(100);
+                    }
+
+                    WorldResetter.ResetWorld();
+                    Main.autoShutdown = true;
+                    Environment.Exit(0);
+                });
+            }
         }
 
-        enum MessageTypes { NONE = 0, GETDAY = 1, SETDAY = 2, READYTORESET = 3, RESETANDDISCONNECT = 4, }
+        /// <summary>
+        /// Server sends packet to client
+        /// </summary>
+        public static void RespawnPlayers()
+        {
+            if (IsServer)
+            {
+                foreach (Player player in Main.player)
+                {
+                    player.ghost = false;
+                }
+
+                ModPacket packet = instance.GetPacket();
+                packet.Write((byte)MessageTypes.RESPAWNPLAYERS);
+                packet.Send();
+            }
+        }
+
+        /// <summary>
+        /// Server sends packet to client
+        /// </summary>
+        public static void RewindTime()
+        {
+            if (IsServer)
+            {
+                ModPacket packet = instance.GetPacket();
+                packet.Write((byte)MessageTypes.REWIND);
+                packet.Send();
+            }
+        }
+
+        enum MessageTypes { NONE, GETDAY, SETDAY, SETTIME, READYTORESET, RESETANDDISCONNECT, REWIND, RESPAWNPLAYERS }
     }
 }

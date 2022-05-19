@@ -1,5 +1,7 @@
 ﻿using Microsoft.Xna.Framework;
+using Newtonsoft.Json;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using Terraria;
 using Terraria.ModLoader;
@@ -9,11 +11,13 @@ namespace NDayCycle
 {
     class WorldResetter : ModWorld
     {
+        private static TagCompound baseState;
+
         static IWorldResetStrategy wrs = new CopyTileStateWorldResetStrategy();
 
         private static bool dayProgress = false;
         public static int Day { get; set; } = 0;
-        public static bool Freeze => IsEndDay();
+        public static bool Freeze => IsEnd();
 
         public override void PostWorldGen()
         {
@@ -26,18 +30,33 @@ namespace NDayCycle
             dayProgress = true;
         }
 
+        class BackupData
+        {
+            public List<List<int>> Tiles { get; set; }
+
+            public List<List<List<int>>> Chests { get; set; }
+        }
+
+
         public override TagCompound Save()
         {
             try
             {
-                var state = wrs.State();
                 var tag = new TagCompound
                 {
                     [nameof(Day)] = Day,
                     [nameof(dayProgress)] = dayProgress,
                 };
 
-                tag.Add("world", state);
+                if (baseState == null)
+                {
+                    var state = wrs.State();
+                    File.WriteAllText(Path.Combine(Main.WorldPath, Main.worldName) + ".ndcbak", JsonConvert.SerializeObject(new BackupData
+                    {
+                        Tiles = state.Get<List<List<int>>>("tiles"),
+                        Chests = state.Get<List<List<List<int>>>>("chests"),
+                    }));
+                }
 
                 return tag;
             }
@@ -53,20 +72,34 @@ namespace NDayCycle
         {
             Day = tag.GetInt(nameof(Day));
             dayProgress = tag.GetBool(nameof(dayProgress));
-            wrs.LoadState(tag.GetCompound("world"));
+
+            var state = JsonConvert.DeserializeObject<BackupData>(File.ReadAllText(Path.Combine(Main.WorldPath, Main.worldName) + ".ndcbak"));
+            baseState = new TagCompound
+            {
+                ["tiles"] = state.Tiles,
+                ["chests"] = state.Chests
+            };
+            wrs.LoadState(baseState);
         }
 
+        private static bool doingReset = false;
         private static double frozenTime;
         public override void PostUpdate()
         {
             base.PostUpdate();
 
+            if (doingReset && (NDayCycle.IsSinglePlayer || NDayCycle.IsServer))
+            {
+                doingReset = !wrs.ResetStep();
+                return;
+            }
+
             if (NDayCycle.IsSinglePlayer || NDayCycle.IsServer)
             {
-                if (!dayProgress && Main.dayTime && Main.time < 3600)
+                if (!dayProgress && Main.dayTime && Main.time < 1000)
                 {
                     NextDay();
-                    if (IsEndDay())
+                    if (IsEnd())
                     {
                         frozenTime = Main.time;
                     }
@@ -77,14 +110,14 @@ namespace NDayCycle
                     dayProgress = false;
                 }
 
-                if (IsEndDay())
+                if (IsEnd())
                 {
                     Main.time = frozenTime;
                 }
             }
         }
 
-        public static void NextDay()
+        public void NextDay()
         {
             Day++;
 
@@ -94,7 +127,7 @@ namespace NDayCycle
                 Console.WriteLine($"day={Day} (Dawn of the {Day + 1} day)");
             }
 
-            if (IsEndDay())
+            if (IsEnd())
             {
                 Main.gamePaused = true;
                 Main.dayRate = 0;
@@ -107,7 +140,7 @@ namespace NDayCycle
             }
         }
         
-        private static string NumberToPosition(int num)
+        public static string NumberToPosition(int num)
         {
             switch(num)
             {
@@ -131,21 +164,20 @@ namespace NDayCycle
             Day = 0;
             Main.dayRate = 1;
             dayProgress = true;
+            Main.StopTrackedSounds();
+            NDayCycle.ShowResetUI();
             wrs.ResetToBaseState(NDayCycle.IsServer);
-            Main.NewText($"Day is {Day}");
+            doingReset = true;
         }
 
-        public static void RestoreOriginalWorld()
-        {
-            string world = Path.Combine(Main.WorldPath, Main.worldName + ".wld");
-            File.Copy(world + ".ncyclebak", world, true);
-        }
-
-
-        const int endDay = 3;
-        public static bool IsEndDay()
+        public const int endDay = 3;
+        public static bool IsEnd()
         {
             return Day >= endDay;
+        }
+        public static bool IsLastDay()
+        {
+            return Day == endDay - 1;
         }
     }
 }

@@ -47,7 +47,7 @@ namespace NDayCycle
                 return;
             }
 
-            if (WorldResetter.IsEndDay())
+            if (WorldResetter.IsEnd())
             {
                 Main.dayRate = 0;
                 Main.gamePaused = true;

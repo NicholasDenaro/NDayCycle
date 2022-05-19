@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using Terraria;
 using Terraria.ID;
+using Terraria.ModLoader;
 using Terraria.ModLoader.IO;
 
 namespace NDayCycle
@@ -40,74 +40,147 @@ namespace NDayCycle
 
         public void ResetToBaseState(bool isServer)
         {
+            startReset = DateTime.Now;
+            step = 0;
+            stepState = ResetState.RESETTILES;
+
+            NDayCycle.RewindTime();
+        }
+
+        private static DateTime startReset;
+        enum ResetState { RESETTILES, RESETFRAMES, RESETPROJECTILES, RESETCHESTS, RESETNPCS, RESETPLAYERS };
+        private int step = 0;
+        private ResetState stepState = ResetState.RESETTILES;
+        public bool ResetStep()
+        {
             try
             {
                 var start = DateTime.Now;
-                Main.NewText("Resetting tiles");
-                for (int y = 0; y < Main.maxTilesY; y++)
+                Main.playerInventory = false;
+                while ((DateTime.Now - start).TotalMilliseconds < 16.66667 * 1)
                 {
-                    for (int x = 0; x < Main.maxTilesX; x++)
+                    int x = step % Main.maxTilesX;
+                    int y = step / Main.maxTilesX;
+                    switch (stepState)
                     {
-                        Main.tile[x, y] = new Tile(tileStates[x, y]);
+                        case ResetState.RESETTILES:
+                            Main.tile[x, y] = new Tile(tileStates[x, y]);
+                            if (++step >= Main.maxTilesX * Main.maxTilesY)
+                            {
+                                Main.NewText("Finished resetting tiles");
+                                Console.WriteLine("Finished resetting tiles");
+                                step = 0;
+                                stepState = ResetState.RESETFRAMES;
+                            }
+                            break;
+                        case ResetState.RESETFRAMES:
+                            if (Main.tile[x, y].active())
+                            {
+                                WorldGen.SquareTileFrame(x, y, true);
+                            }
+                            if (Main.tile[x, y].wall != WallID.None)
+                            {
+                                WorldGen.SquareWallFrame(x, y, true);
+                            }
+                            if (++step >= Main.maxTilesX * Main.maxTilesY)
+                            {
+                                Main.NewText("Finished resetting tile walls");
+                                Console.WriteLine("Finished resetting tile walls");
+                                step = 0;
+                                stepState = ResetState.RESETPROJECTILES;
+                            }
+                            break;
+                        case ResetState.RESETPROJECTILES:
+                            if (step < Main.projectile.Length)
+                            {
+                                Main.projectile[step].active = false;
+                            }
+
+                            if (++step >= Main.projectile.Length)
+                            {
+                                Main.NewText("Finished resetting projectiles");
+                                Console.WriteLine("Finished resetting projectiles");
+                                step = 0;
+                                stepState = ResetState.RESETCHESTS;
+                            }
+
+                            break;
+                        case ResetState.RESETCHESTS:
+
+                            for (int it = 0; it < (Main.chest[step]?.item.Length ?? 0); it++)
+                            {
+                                Main.chest[step]?.item[it]?.SetDefaults(chests[step][it][0]);
+                                Main.chest[step].item[it].stack = chests[step][it][1];
+                            }
+
+                            if (++step >= Main.chest.Length)
+                            {
+                                Main.NewText("Finished resetting chests");
+                                Console.WriteLine("Finished resetting chests");
+                                step = 0;
+                                stepState = ResetState.RESETNPCS;
+                            }
+                            break;
+                        case ResetState.RESETNPCS:
+                            if (step < Main.npc.Length)
+                            {
+                                Main.npc[step].life = 0;
+                            }
+
+                            if (++step >= Main.npc.Length)
+                            {
+                                Main.NewText("Finished resetting npcs");
+                                Console.WriteLine("Finished resetting npcs");
+                                step = 0;
+                                stepState = ResetState.RESETPLAYERS;
+                            }
+                            break;
+                        case ResetState.RESETPLAYERS:
+                            if (step < Main.player.Length)
+                            {
+                                Main.player[step].ghost = false;
+                                Main.player[step].position = new Microsoft.Xna.Framework.Vector2(Main.spawnTileX, Main.spawnTileY - 3).ToWorldCoordinates();
+                            }
+
+                            if (++step >= Main.player.Length)
+                            {
+                                step = 0;
+                                stepState = ResetState.RESETTILES;
+                                Main.NewText("Finished resetting players");
+                                Console.WriteLine("Finished resetting players");
+
+                                Main.updateMap = true;
+                                Main.time = 0;
+                                Main.dayTime = true;
+
+                                NPC.NewNPC(Main.spawnTileX * 16, (Main.spawnTileY - 3) * 16, NPCID.Guide);
+
+                                if (NDayCycle.IsSinglePlayer)
+                                {
+                                    Main.NewText($"Reset time: {DateTime.Now - startReset}");
+                                    Console.WriteLine($"Reset time: {DateTime.Now - startReset}");
+                                    NDayCycle.HideUI();
+                                    NDayCycle.ShowDayMessage("Dawn of", $"The First Day", $"-72 Hours Remain-");
+                                }
+                                if (NDayCycle.IsServer)
+                                {
+                                    NDayCycle.SendDay();
+                                    NDayCycle.RespawnPlayers();
+                                }
+
+                                return true;
+                            }
+                            break;
                     }
                 }
-
-                Main.NewText("Resetting tile frames");
-                for (int y = 0; y < Main.maxTilesY; y++)
-                {
-                    for (int x = 0; x < Main.maxTilesX; x++)
-                    {
-                        if (Main.tile[x, y].active())
-                        {
-                            WorldGen.SquareTileFrame(x, y, true);
-                        }
-                        if (Main.tile[x,y].wall != WallID.None)
-                        {
-                            WorldGen.SquareWallFrame(x, y, true);
-                        }
-                    }
-                }
-
-                Main.NewText("Resetting chests");
-                for (int i = 0; i < Main.chest.Length; i++)
-                {
-                    for (int it = 0; it < (Main.chest[i]?.item.Length ?? 0); it++)
-                    {
-                        Main.chest[i]?.item[it]?.SetDefaults(chests[i][it][0]);
-                        Main.chest[i].item[it].stack = chests[i][it][1];
-                    }
-                }
-
-                for (int i = 0; i < Main.npc.Length; i++)
-                {
-                    Main.npc[i].life = 0;
-                }
-
-                Main.updateMap = true;
-                Main.time = 3600;
-                Main.dayTime = true;
-
-                var end = DateTime.Now;
-                Main.NewText($"Time: {end - start}");
             }
             catch (Exception ex)
             {
-                Console.Error.WriteLine($"{DateTime.Now} {ex.Message}\n{ex.StackTrace}");
-                Main.NewText($"Error: {ex.Message}");
+                Main.NewText($"Exception: {ex.Message} {ex.StackTrace}");
+                Console.Error.WriteLine($"Exception: {ex.Message} {ex.StackTrace}");
             }
-            finally
-            {
-                Main.NewText("Resetting player ghosts");
-                foreach (Player player in Main.player)
-                {
-                    player.ghost = false;
-                    player.Teleport(new Microsoft.Xna.Framework.Vector2(Main.spawnTileX, Main.spawnTileY - 3).ToWorldCoordinates());
-                }
 
-                Main.time = 3600;
-                Main.dayTime = true;
-                Main.NewText("Finished resetting");
-            }
+            return false;
         }
 
         public void LoadState(TagCompound tag)

@@ -8,6 +8,8 @@ namespace NDayCycle
 
         void ResetToBaseState(bool isServer);
 
+        bool ResetStep();
+
         void LoadState(TagCompound tags);
 
         TagCompound State();

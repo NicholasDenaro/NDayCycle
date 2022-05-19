@@ -222,6 +222,11 @@ namespace NDayCycle
                     continue;
                 }
 
+                if (item.ammo > 0 && ModContent.GetInstance<NDayCycleConfig>().KeepAmmo)
+                {
+                    continue;
+                }
+
                 item.TurnToAir();
             }
 
@@ -234,7 +239,10 @@ namespace NDayCycle
                 item.TurnToAir();
             }
 
-            NDayCycle.HideUI();
+            if (NDayCycle.IsSinglePlayer)
+            {
+                NDayCycle.HideUI();
+            }
         }
 
         public override void Update(GameTime gameTime)

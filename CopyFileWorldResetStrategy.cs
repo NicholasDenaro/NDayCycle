@@ -26,17 +26,28 @@ namespace NDayCycle
         {
         }
 
+        public bool ResetStep()
+        {
+            return true;
+        }
+
         public void ResetToBaseState(bool isServer)
         {
             if (!isServer)
             {
-                WorldGen.SaveAndQuit(WorldResetter.RestoreOriginalWorld);
+                WorldGen.SaveAndQuit(RestoreOriginalWorld);
             }
             else
             {
                 WorldFile.saveWorld(WorldFile.IsWorldOnCloud);
                 NDayCycle.DisconnectPlayersForReset();
             }
+        }
+
+        public static void RestoreOriginalWorld()
+        {
+            string world = Path.Combine(Main.WorldPath, Main.worldName + ".wld");
+            File.Copy(world + ".ncyclebak", world, true);
         }
 
         public TagCompound State()
