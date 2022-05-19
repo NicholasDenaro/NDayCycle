@@ -1,5 +1,4 @@
 ﻿using Microsoft.Xna.Framework;
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using Terraria;
@@ -12,13 +11,13 @@ namespace NDayCycle
 {
     public class KeepsUI : UIElement
     {
-        private MenuBar menu;
+        private MenuBarUIState menu;
 
         private List<ItemSlot> slots = new List<ItemSlot>();
 
         public int SlotsCount => slots.Count;
 
-        public KeepsUI(MenuBar menu)
+        public KeepsUI(MenuBarUIState menu)
         {
             this.menu = menu;
         }
@@ -36,10 +35,6 @@ namespace NDayCycle
             {
                 slots.Add(new ItemSlot(50 * (i % 3), 50 * (1 + i / 3), this, ItemSlot.SlotType.any));
             }
-
-            //slots.Add(new ItemSlot(0, 50, this, ItemSlot.SlotType.any));
-            //slots.Add(new ItemSlot(50, 50, this, ItemSlot.SlotType.any));
-            //slots.Add(new ItemSlot(100, 50, this, ItemSlot.SlotType.any));
 
             this.Width.Set(200, 0);
             this.Height.Set(50 + 50 * (1 + ModContent.GetInstance<NDayCycleConfig>().MiscItemsToKeep / 3), 0);
@@ -171,7 +166,7 @@ namespace NDayCycle
         }
     }
 
-    public class MenuBar: UIState
+    public class MenuBarUIState: UIState
     {
         KeepsUI keeps;
 
@@ -227,6 +222,11 @@ namespace NDayCycle
                     continue;
                 }
 
+                if (item.ammo > 0 && ModContent.GetInstance<NDayCycleConfig>().KeepAmmo)
+                {
+                    continue;
+                }
+
                 item.TurnToAir();
             }
 
@@ -239,10 +239,10 @@ namespace NDayCycle
                 item.TurnToAir();
             }
 
-
-            this.Deactivate();
-            NDayCycle.HideMenu();
-            WorldGen.SaveAndQuit();
+            if (NDayCycle.IsSinglePlayer)
+            {
+                NDayCycle.HideUI();
+            }
         }
 
         public override void Update(GameTime gameTime)

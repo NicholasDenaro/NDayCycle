@@ -1,4 +1,5 @@
-﻿using Terraria.ModLoader;
+﻿using Terraria;
+using Terraria.ModLoader;
 
 namespace NDayCycle
 {
@@ -10,7 +11,9 @@ namespace NDayCycle
 
         public override void Action(CommandCaller caller, string input, string[] args)
         {
-            WorldResetter.NextDay();
+            Main.time = 3600 * 8 + 1800;
+            Main.dayTime = false;
+            NDayCycle.SendTime();
         }
     }
 }
