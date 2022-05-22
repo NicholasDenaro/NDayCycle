@@ -66,7 +66,7 @@ namespace NDayCycle
 
         public void Step()
         {
-            if (Main.GameUpdateCount % (130 /  (1000 / (Main.fpsCount + 1))) == 0 && index < 80)
+            if (Main.GameUpdateCount % (130 /  (1000 / 60)) == 0 && index < 80)
             {
                 index++;
                 this.Recalculate();

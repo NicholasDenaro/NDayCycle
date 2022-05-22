@@ -4,6 +4,8 @@ namespace NDayCycle
 {
     interface IWorldResetStrategy
     {
+        void Unload();
+
         void CopyBaseState();
 
         void ResetToBaseState(bool isServer);

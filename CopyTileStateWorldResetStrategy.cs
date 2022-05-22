@@ -14,6 +14,12 @@ namespace NDayCycle
         private List<List<List<int>>> chests;
         private int size;
 
+        public void Unload()
+        {
+            tileStates = null;
+            chests = null;
+        }
+
         public void CopyBaseState()
         {
             size = Main.maxTilesX * Main.maxTilesY;
@@ -154,6 +160,54 @@ namespace NDayCycle
                                 Main.dayTime = true;
 
                                 NPC.NewNPC(Main.spawnTileX * 16, (Main.spawnTileY - 3) * 16, NPCID.Guide);
+
+                                Main.stopMoonEvent();
+                                Main.StopSlimeRain();
+                                Main.invasionType = 0;
+                                Main.invasionX = 0.0;
+                                Main.invasionSize = 0;
+                                Main.invasionDelay = 0;
+                                Main.invasionWarn = 0;
+                                Main.invasionSizeStart = 0;
+                                Main.invasionProgressNearInvasion = false;
+                                Main.invasionProgressMode = 2;
+                                Main.invasionProgressIcon = 0;
+                                Main.invasionProgress = 0;
+                                Main.invasionProgressMax = 0;
+                                Main.invasionProgressWave = 0;
+                                Main.invasionProgressDisplayLeft = 0;
+                                Main.invasionProgressAlpha = 0.0f;
+
+                                Main.hardMode = false;
+
+                                NPC.downedAncientCultist = false;
+                                NPC.downedBoss1 = false;
+                                NPC.downedBoss2 = false;
+                                NPC.downedBoss3 = false;
+                                NPC.downedChristmasIceQueen = false;
+                                NPC.downedChristmasSantank = false;
+                                NPC.downedChristmasTree = false;
+                                NPC.downedClown =false;
+                                NPC.downedFishron = false;
+                                NPC.downedFrost = false;
+                                NPC.downedGoblins = false;
+                                NPC.downedGolemBoss = false;
+                                NPC.downedHalloweenKing = false;
+                                NPC.downedHalloweenTree = false;
+                                NPC.downedMartians = false;
+                                NPC.downedMechBoss1 = false;
+                                NPC.downedMechBoss2 = false;
+                                NPC.downedMechBoss3 = false;
+                                NPC.downedMechBossAny = false;
+                                NPC.downedMoonlord = false;
+                                NPC.downedPirates = false;
+                                NPC.downedPlantBoss = false;
+                                NPC.downedQueenBee = false;
+                                NPC.downedSlimeKing = false;
+                                NPC.downedTowerNebula = false;
+                                NPC.downedTowerSolar = false;
+                                NPC.downedTowerStardust = false;
+                                NPC.downedTowerVortex = false;
 
                                 if (NDayCycle.IsSinglePlayer)
                                 {

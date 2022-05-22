@@ -9,6 +9,11 @@ namespace NDayCycle
 {
     class CopyFileWorldResetStrategy : IWorldResetStrategy
     {
+        public void Unload()
+        {
+
+        }
+
         public void CopyBaseState()
         {
             string world = Path.Combine(Main.WorldPath, Main.worldName + ".wld");

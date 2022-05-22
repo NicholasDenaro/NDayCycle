@@ -30,6 +30,12 @@ namespace NDayCycle
             dayProgress = true;
         }
 
+        public static void Unload()
+        {
+            wrs.Unload();
+            wrs = null;
+        }
+
         class BackupData
         {
             public List<List<int>> Tiles { get; set; }
@@ -165,6 +171,7 @@ namespace NDayCycle
             Main.dayRate = 1;
             dayProgress = true;
             Main.StopTrackedSounds();
+            NDayCycle.finalHoursSoundEffect.Stop();
             NDayCycle.ShowResetUI();
             wrs.ResetToBaseState(NDayCycle.IsServer);
             doingReset = true;

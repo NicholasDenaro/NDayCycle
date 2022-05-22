@@ -1,4 +1,5 @@
 using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Audio;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -17,13 +18,16 @@ namespace NDayCycle
 	{
         public static NDayCycle instance;
         private static UserInterface _ui;
-        public static MenuBarUIState MenuBar;
+        public static KeepsUIState MenuBar;
         public static DawnDayUIState DayMessage;
         public static ResetSceneUIState ResetSceneUIState;
         private static bool finalHoursSound = false;
         public static bool IsServer { get; private set; }
+        public static bool IsShowingOverlay { get; private set; }
         public static bool IsSinglePlayer => Main.netMode != NetmodeID.MultiplayerClient;
         public static double frozenTime = -1;
+
+        public static SoundEffectInstance finalHoursSoundEffect;
 
         #region Stackables
         public static int[] StackableItems = new int[]
@@ -138,6 +142,7 @@ namespace NDayCycle
         {
             instance = this;
             ready = new List<int>();
+            finalHoursSound = false;
             if (!Main.dedServ)
             {
                 TextureManager.Load("Images/UI/ResetScene");
@@ -145,7 +150,7 @@ namespace NDayCycle
                 TextureManager.Load("Images/UI/ResetScene_2");
                 TextureManager.Load("Images/UI/ResetScene_3");
 
-                MenuBar = new MenuBarUIState();
+                MenuBar = new KeepsUIState();
                 MenuBar.Activate();
                 DayMessage = new DawnDayUIState();
                 DayMessage.Activate();
@@ -162,6 +167,16 @@ namespace NDayCycle
         public static bool StackableItemTypes(Item item)
         {
             return item.potion || item.consumable;
+        }
+
+        public override void PreSaveAndQuit()
+        {
+            base.PreSaveAndQuit();
+
+            if (_ui.CurrentState == MenuBar)
+            {
+                MenuBar.MoveItemsBack();
+            }
         }
 
         public List<int> ready;
@@ -204,11 +219,11 @@ namespace NDayCycle
                     {
                         Main.PlaySound(this.GetLegacySoundSlot(SoundType.Custom, "Sounds/Custom/TickSound"));
                     }
-
                 }
-                if (WorldResetter.IsLastDay() && Main.time > 3600 * 6 + 3600 * 1 / 4 && !finalHoursSound)
+                if (WorldResetter.IsLastDay() && (Main.time > 3600 * 6 + 3600 * 1 / 4) && !finalHoursSound)
                 {
-                    Main.PlayTrackedSound(this.GetLegacySoundSlot(SoundType.Custom, "Sounds/Custom/FinalHoursSound"));
+                    Main.NewText("Final hours");
+                    finalHoursSoundEffect = Main.PlaySound(this.GetLegacySoundSlot(SoundType.Custom, "Sounds/Custom/FinalHoursSound"));
                     finalHoursSound = true;
                 }
             }
@@ -219,11 +234,15 @@ namespace NDayCycle
             instance = null;
             _ui = null;
             MenuBar = null;
+            IsShowingOverlay = false;
+            WorldResetter.Unload();
         }
 
         public static void ShowMenu()
         {
             _ui?.SetState(MenuBar);
+            MenuBar?.AutoFillItems();
+            IsShowingOverlay = true;
         }
 
         public static void ShowDayMessage(string top, string mid, string bot)
@@ -237,6 +256,7 @@ namespace NDayCycle
                 var invIsOpen = Main.playerInventory;
                 NDayCycle.Pause = true;
                 Main.playerInventory = true;
+                IsShowingOverlay = true;
                 Task.Delay(pauseTime).ContinueWith(task =>
                 {
                     HideUI();
@@ -263,11 +283,13 @@ namespace NDayCycle
         {
             _ui?.SetState(ResetSceneUIState);
             ResetSceneUIState?.Reset();
+            IsShowingOverlay = true;
         }
 
         public static void HideUI()
         {
             _ui?.SetState(null);
+            IsShowingOverlay = false;
         }
 
         public override void UpdateUI(GameTime gameTime)

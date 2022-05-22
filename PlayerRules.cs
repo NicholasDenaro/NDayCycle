@@ -47,6 +47,11 @@ namespace NDayCycle
                 return;
             }
 
+            if (NDayCycle.IsShowingOverlay)
+            {
+                player.velocity = new Microsoft.Xna.Framework.Vector2(0, 0);
+            }
+
             if (WorldResetter.IsEnd())
             {
                 Main.dayRate = 0;

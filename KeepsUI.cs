@@ -1,4 +1,5 @@
 ﻿using Microsoft.Xna.Framework;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Terraria;
@@ -11,13 +12,13 @@ namespace NDayCycle
 {
     public class KeepsUI : UIElement
     {
-        private MenuBarUIState menu;
+        private KeepsUIState menu;
 
         private List<ItemSlot> slots = new List<ItemSlot>();
 
         public int SlotsCount => slots.Count;
 
-        public KeepsUI(MenuBarUIState menu)
+        public KeepsUI(KeepsUIState menu)
         {
             this.menu = menu;
         }
@@ -46,6 +47,74 @@ namespace NDayCycle
         {
             base.Update(gameTime);
             Main.LocalPlayer.mouseInterface = true;
+        }
+
+        public void MoveItemsBack()
+        {
+            for (int i = 0; i < slots.Count; i++)
+            {
+                var inv = Main.player[Main.myPlayer].inventory;
+                for (int j = 0; j < inv.Length; j++)
+                {
+                    if (inv[j].IsAir)
+                    {
+                        inv[j] = slots[i].ItemClone;
+                        break;
+                    }
+                }
+                slots[i].TurnToAir();
+            }
+        }
+
+        public void AutoFillItems()
+        {
+            var maxPick = Main.player[Main.myPlayer].inventory.Max(it => it.pick);
+            var item = Main.player[Main.myPlayer].inventory.FirstOrDefault(it => it.pick == maxPick);
+            var index = Array.IndexOf(Main.player[Main.myPlayer].inventory, item);
+            if (index >= 0)
+            {
+                slots[0].SetItem(item.DeepClone());
+                Main.player[Main.myPlayer].inventory[index].TurnToAir();
+            }
+
+            var maxAxe = Main.player[Main.myPlayer].inventory.Max(it => it.axe);
+            item = Main.player[Main.myPlayer].inventory.FirstOrDefault(it => it.axe == maxAxe);
+            index = Array.IndexOf(Main.player[Main.myPlayer].inventory, item);
+            if (index >= 0)
+            {
+                slots[1].SetItem(item.DeepClone());
+                Main.player[Main.myPlayer].inventory[index].TurnToAir();
+            }
+
+            var maxHammer = Main.player[Main.myPlayer].inventory.Max(it => it.hammer);
+            item = Main.player[Main.myPlayer].inventory.FirstOrDefault(it => it.hammer == maxHammer);
+            index = Array.IndexOf(Main.player[Main.myPlayer].inventory, item);
+            if (index >= 0)
+            {
+                slots[2].SetItem(item.DeepClone());
+                Main.player[Main.myPlayer].inventory[index].TurnToAir();
+            }
+
+            var maxWeapon = Main.player[Main.myPlayer].inventory.Max(it => it.ammo > 0 ? 0 : it.damage);
+            item = Main.player[Main.myPlayer].inventory.FirstOrDefault(it => it.damage == maxWeapon);
+            index = Array.IndexOf(Main.player[Main.myPlayer].inventory, item);
+            if (index >= 0)
+            {
+                slots[3].SetItem(item.DeepClone());
+                Main.player[Main.myPlayer].inventory[index].TurnToAir();
+            }
+
+            for (int i = 4; i < slots.Count; i++)
+            {
+                item = Main.player[Main.myPlayer].inventory.FirstOrDefault(it => it.favorited);
+                index = Array.IndexOf(Main.player[Main.myPlayer].inventory, item);
+                if (index >= 0)
+                {
+                    slots[i].SetItem(item.DeepClone());
+                    Main.player[Main.myPlayer].inventory[index].TurnToAir();
+                    Main.player[Main.myPlayer].inventory[index].favorited = false;
+                }
+            }
         }
 
         public void SetItems()
@@ -164,9 +233,17 @@ namespace NDayCycle
             image.SetImage(Main.itemTexture[item.type]);
             count.SetText(item.stack > 1 ? "" + item.stack : "");
         }
+
+        public void SetItem(Item it)
+        {
+            item = it.DeepClone();
+
+            image.SetImage(Main.itemTexture[item.type]);
+            count.SetText(item.stack > 1 ? "" + item.stack : "");
+        }
     }
 
-    public class MenuBarUIState: UIState
+    public class KeepsUIState : UIState
     {
         KeepsUI keeps;
 
@@ -190,6 +267,16 @@ namespace NDayCycle
             panel.Append(resetButton);
 
             this.Recalculate();
+        }
+
+        public void MoveItemsBack()
+        {
+            keeps.MoveItemsBack();
+        }
+
+        public void AutoFillItems()
+        {
+            keeps.AutoFillItems();
         }
 
         private void ResetButton_OnClick(UIMouseEvent evt, UIElement listeningElement)
